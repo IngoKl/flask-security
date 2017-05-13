@@ -14,7 +14,6 @@
 from datetime import datetime
 
 import pkg_resources
-
 from flask import current_app, render_template
 from flask_babelex import Domain
 from flask_login import UserMixin as BaseUserMixin
@@ -31,8 +30,8 @@ from .forms import ChangePasswordForm, ConfirmRegisterForm, \
     ForgotPasswordForm, LoginForm, PasswordlessLoginForm, RegisterForm, \
     ResetPasswordForm, SendConfirmationForm
 from .utils import config_value as cv
-from .utils import _, get_config, hash_data, string_types, url_for_security, \
-    verify_hash
+from .utils import _, get_config, hash_data, localize_callback, string_types, \
+    url_for_security, verify_hash
 from .views import create_blueprint
 
 # Convenient references
@@ -86,7 +85,9 @@ _default_config = {
     'CONFIRM_EMAIL_WITHIN': '5 days',
     'RESET_PASSWORD_WITHIN': '5 days',
     'LOGIN_WITHOUT_CONFIRMATION': False,
-    'EMAIL_SENDER': 'no-reply@localhost',
+    'EMAIL_SENDER': LocalProxy(lambda: current_app.config.get(
+        'MAIL_DEFAULT_SENDER', 'no-reply@localhost'
+    )),
     'TOKEN_AUTHENTICATION_KEY': 'auth_token',
     'TOKEN_AUTHENTICATION_HEADER': 'Authentication-Token',
     'TOKEN_MAX_AGE': None,
@@ -260,6 +261,7 @@ def _on_identity_loaded(sender, identity):
 def _get_login_manager(app, anonymous_user):
     lm = LoginManager()
     lm.anonymous_user = anonymous_user or AnonymousUser
+    lm.localize_callback = localize_callback
     lm.login_view = '%s.login' % cv('BLUEPRINT_NAME', app=app)
     lm.user_loader(_user_loader)
     lm.request_loader(_request_loader)
@@ -378,6 +380,10 @@ class UserMixin(BaseUserMixin):
             return role in (role.name for role in self.roles)
         else:
             return role in self.roles
+
+    def get_security_payload(self):
+        """Serialize user object as response payload."""
+        return {'id': str(self.id)}
 
 
 class AnonymousUser(AnonymousUserMixin):

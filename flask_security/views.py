@@ -45,7 +45,8 @@ def _render_json(form, include_user=True, include_auth_token=False):
         code = 200
         response = dict()
         if include_user:
-            response['user'] = dict(id=str(form.user.id))
+            response['user'] = form.user.get_security_payload()
+
         if include_auth_token:
             token = form.user.get_auth_token()
             response['user']['authentication_token'] = token
@@ -312,7 +313,8 @@ def change_password():
 
     if form.validate_on_submit():
         after_this_request(_commit)
-        change_user_password(current_user, form.new_password.data)
+        change_user_password(current_user._get_current_object(),
+                             form.new_password.data)
         if request.json is None:
             do_flash(*get_message('PASSWORD_CHANGE'))
             return redirect(get_url(_security.post_change_view) or

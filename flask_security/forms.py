@@ -128,7 +128,8 @@ class NewPasswordFormMixin():
 class PasswordConfirmFormMixin():
     password_confirm = PasswordField(
         get_form_field_label('retype_password'),
-        validators=[EqualTo('password', message='RETYPE_PASSWORD_MISMATCH')])
+        validators=[EqualTo('password', message='RETYPE_PASSWORD_MISMATCH'),
+                    password_required])
 
 
 class NextFormMixin():
@@ -206,8 +207,10 @@ class PasswordlessLoginForm(Form, UserEmailFormMixin):
 class LoginForm(Form, NextFormMixin):
     """The default login form"""
 
-    email = StringField(get_form_field_label('email'))
-    password = PasswordField(get_form_field_label('password'))
+    email = StringField(get_form_field_label('email'),
+                        validators=[Required(message='EMAIL_NOT_PROVIDED')])
+    password = PasswordField(get_form_field_label('password'),
+                             validators=[password_required])
     remember = BooleanField(get_form_field_label('remember_me'))
     submit = SubmitField(get_form_field_label('login'))
 
@@ -226,15 +229,6 @@ class LoginForm(Form, NextFormMixin):
 
     def validate(self):
         if not super(LoginForm, self).validate():
-            return False
-
-        if not self.email.data or self.email.data.strip() == '':
-            self.email.errors.append(get_message('EMAIL_NOT_PROVIDED')[0])
-            return False
-
-        if not self.password.data or self.password.data.strip() == '':
-            self.password.errors.append(
-                get_message('PASSWORD_NOT_PROVIDED')[0])
             return False
 
         self.user = _datastore.get_user(self.email.data)
@@ -286,7 +280,8 @@ class ChangePasswordForm(Form, PasswordFormMixin):
     new_password_confirm = PasswordField(
         get_form_field_label('retype_password'),
         validators=[EqualTo('new_password',
-                            message='RETYPE_PASSWORD_MISMATCH')])
+                            message='RETYPE_PASSWORD_MISMATCH'),
+                    password_required])
 
     submit = SubmitField(get_form_field_label('change_password'))
 
